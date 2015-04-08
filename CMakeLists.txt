@@ -1,88 +1,67 @@
-CMAKE_MINIMUM_REQUIRED( VERSION 2.6 )
-PROJECT( "glew" )
+cmake_minimum_required(VERSION 2.8.12)
+project(glew)
 
-SET( SRC_DIR ${CMAKE_CURRENT_SOURCE_DIR}/src )
-SET( INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/include )
-SET( RC_DIR ${CMAKE_CURRENT_SOURCE_DIR}/build )
+option(GLEW_USE_GLU "Use OpenGL Utilites library" OFF)
 
-SET( CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib )
-SET( CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib )
-SET( CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin )
+set(GLEW_VERSION_MAJOR 1)
+set(GLEW_VERSION_MINOR 12)
+set(GLEW_VERSION_PATCH 0)
+set(GLEW_VERSION "${GLEW_VERSION_MAJOR}.${GLEW_VERSION_MINOR}.${GLEW_VERSION_PATCH}")
 
-OPTION( glew-cmake_BUILD_SHARED "Build the shared glew library" ON)
-OPTION( glew-cmake_BUILD_STATIC "Build the static glew library" ON)
+find_package(OpenGL REQUIRED)
 
-INCLUDE_DIRECTORIES( ${INCLUDE_DIR} )
+list(APPEND GLEW_SOURCES src/glew.c)
+if(MSVC)
+	list(APPEND GLEW_SOURCES build/glew.rc)
+endif()
 
-SET( LIBGLEW_SRCS ${SRC_DIR}/glew.c )
+add_library(glew ${GLEW_SOURCES})
 
-IF( WIN32 )
-	ADD_DEFINITIONS( -DWIN32_MEAN_AND_LEAN -DVC_EXTRALEAN -DGLEW_BUILD -D_CRT_SECURE_NO_WARNINGS )
-ENDIF(  )
+if(WIN32)
+	target_compile_definitions(glew PRIVATE -DWIN32_MEAN_AND_LEAN -DVC_EXTRALEAN -DGLEW_BUILD -D_CRT_SECURE_NO_WARNINGS)
+endif()
 
-IF( MSVC )
-	LIST( APPEND LIBGLEW_SRCS ${RC_DIR}/glew.rc )
-ENDIF(  )
+if(NOT GLEW_USE_GLU)
+	target_link_libraries(glew INTERFACE ${OPENGL_gl_LIBRARY})
+	target_compile_definitions(glew PRIVATE -DGLEW_NO_GLU)
+else()
+	target_link_libraries(glew INTERFACE ${OPENGL_LIBRARIES})
+endif()
 
-IF( NOT USE_GLU )
-	ADD_DEFINITIONS( -DGLEW_NO_GLU )
-ENDIF(  )
+target_include_directories(glew PUBLIC
+	$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+	$<INSTALL_INTERFACE:include>)
 
-IF( WIN32 )
-	SET( GL_LIBRARY opengl32 )
-ELSEIF( APPLE )
-	FIND_LIBRARY( GL_LIBRARY OpenGL )
-	FIND_LIBRARY( AGL_LIBRARY AGL )
-	SET( PLATFORM_SPECIFIC_LIBRARIES ${AGL_LIBRARY} )
-ELSE(  )
-	SET( GL_LIBRARY GL )
-	SET( PLATFORM_SPECIFIC_LIBRARIES X11 dl Xext )
-ENDIF(  )
+include(GNUInstallDirs)
 
-IF ( glew-cmake_BUILD_STATIC )
-	ADD_LIBRARY( libglew_static STATIC ${LIBGLEW_SRCS} )
+install(TARGETS glew 
+	EXPORT glewTargets 
+	DESTINATION ${CMAKE_INSTALL_LIBDIR})
 
-	SET_PROPERTY( TARGET libglew_static PROPERTY ARCHIVE_OUTPUT_NAME "glew" )
-	SET_PROPERTY( TARGET libglew_static PROPERTY DEBUG_POSTFIX d )
-	INSTALL( TARGETS libglew_static DESTINATION lib )
-	TARGET_LINK_LIBRARIES( libglew_static ${GL_LIBRARY} ${PLATFORM_SPECIFIC_LIBRARIES} )
-ENDIF (  )
+install(DIRECTORY include/GL DESTINATION ${CMAKE_INSTALL_INCLUDEDIR} 
+	FILES_MATCHING PATTERN "*.h")
 
-IF ( glew-cmake_BUILD_SHARED )
-	ADD_LIBRARY( libglew_shared SHARED ${LIBGLEW_SRCS} )
+include(CMakePackageConfigHelpers)
+set(GLEW_INSTALL_CONFIGDIR "${CMAKE_INSTALL_LIBDIR}/cmake/glew")
 
-	IF( WIN32 )
-		SET_PROPERTY( TARGET libglew_shared PROPERTY RUNTIME_OUTPUT_NAME "glew" )
-	ELSE(  )
-		SET_PROPERTY( TARGET libglew_shared PROPERTY LIBRARY_OUTPUT_NAME "glew" )
-	ENDIF(  )
-	SET_PROPERTY( TARGET libglew_shared PROPERTY DEBUG_POSTFIX d )
+write_basic_package_version_file("${CMAKE_CURRENT_BINARY_DIR}/glewConfigVersion.cmake" 
+	VERSION ${GLEW_VERSION} 
+	COMPATIBILITY AnyNewerVersion)
 
-	TARGET_LINK_LIBRARIES( libglew_shared ${GL_LIBRARY} ${PLATFORM_SPECIFIC_LIBRARIES} )
-	INSTALL( TARGETS libglew_shared DESTINATION lib )
-ENDIF (  )
+configure_file(build/cmake/glewConfig.cmake
+	"${CMAKE_CURRENT_BINARY_DIR}/glewConfig.cmake"
+	COPYONLY)
 
-FILE( GLOB PUBLIC_HEADERS "include/GL/*.h" )
-INSTALL( FILES ${PUBLIC_HEADERS} DESTINATION include/GL/ )
+export(EXPORT glewTargets
+	FILE "${CMAKE_CURRENT_BINARY_DIR}/glewTargets.cmake")
 
-IF( ${CMAKE_CURRENT_SOURCE_DIR} STREQUAL ${CMAKE_SOURCE_DIR} AND NOT ONLY_LIBS )
-	SET( GLEWINFO_SRCS ${SRC_DIR}/glewinfo.c )
-	SET( VISUALINFO_SRCS ${SRC_DIR}/visualinfo.c )
-	IF( MSVS )
-		LIST( APPEND GLEWINFO_SRCS ${RC_DIR}/glewinfo.rc )
-		LIST( APPEND VISUALINFO_SRCS ${RC_DIR}/visualinfo.rc )
-	ENDIF(  )
+install(EXPORT glewTargets 
+	FILE glewTargets.cmake
+	DESTINATION ${GLEW_INSTALL_CONFIGDIR})
 
-	ADD_EXECUTABLE( glewinfo ${GLEWINFO_SRCS} )
-	ADD_EXECUTABLE( visualinfo ${VISUALINFO_SRCS} )
-
-	IF ( glew-cmake_BUILD_STATIC )
-		TARGET_LINK_LIBRARIES( glewinfo libglew_static )
-		TARGET_LINK_LIBRARIES( visualinfo libglew_static )
-	ELSE ( )
-		TARGET_LINK_LIBRARIES( glewinfo libglew_shared )
-		TARGET_LINK_LIBRARIES( visualinfo libglew_shared )
-	ENDIF (  )
-
-	INSTALL( TARGETS glewinfo visualinfo DESTINATION bin )
-ENDIF(  )
+install(
+	FILES 
+		"${CMAKE_CURRENT_BINARY_DIR}/glewConfig.cmake"
+		"${CMAKE_CURRENT_BINARY_DIR}/glewConfigVersion.cmake"
+	DESTINATION
+		${GLEW_INSTALL_CONFIGDIR})
