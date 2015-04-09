@@ -1,12 +1,7 @@
 cmake_minimum_required(VERSION 2.8.12)
-project(glew)
+project(glew VERSION "1.12.0" LANGUAGES C)
 
 option(GLEW_USE_GLU "Use OpenGL Utilites library" OFF)
-
-set(GLEW_VERSION_MAJOR 1)
-set(GLEW_VERSION_MINOR 12)
-set(GLEW_VERSION_PATCH 0)
-set(GLEW_VERSION "${GLEW_VERSION_MAJOR}.${GLEW_VERSION_MINOR}.${GLEW_VERSION_PATCH}")
 
 find_package(OpenGL REQUIRED)
 
@@ -40,8 +35,7 @@ include(GNUInstallDirs)
 
 install(
     TARGETS glew 
-	EXPORT glewTargets 
-	DESTINATION ${CMAKE_INSTALL_LIBDIR})
+	EXPORT glewTargets)
 
 install(
     FILES ${GLEW_HEADERS}
