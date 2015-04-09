@@ -36,7 +36,8 @@ include(GNUInstallDirs)
 
 install(
     TARGETS glew 
-	EXPORT glewTargets)
+	EXPORT glewTargets
+	DESTINATION ${CMAKE_INSTALL_LIBDIR})
 
 install(
     FILES ${GLEW_HEADERS}
@@ -50,13 +51,13 @@ write_basic_package_version_file(
 	VERSION ${GLEW_VERSION} 
 	COMPATIBILITY AnyNewerVersion)
 
-configure_file(build/cmake/glewConfig.cmake
-	"${CMAKE_CURRENT_BINARY_DIR}/glewConfig.cmake"
-	COPYONLY)
-
 export(
     EXPORT glewTargets
 	FILE "${CMAKE_CURRENT_BINARY_DIR}/glewTargets.cmake")
+
+configure_file(build/cmake/glewConfig.cmake
+	glewConfig.cmake
+	COPYONLY)
 
 export(PACKAGE glew)
 
