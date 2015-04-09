@@ -1,5 +1,6 @@
 cmake_minimum_required(VERSION 2.8.12)
-project(glew VERSION "1.12.0" LANGUAGES C)
+project(glew LANGUAGES C)
+set(GLEW_VERSION "1.12.0")
 
 option(GLEW_USE_GLU "Use OpenGL Utilites library" OFF)
 
